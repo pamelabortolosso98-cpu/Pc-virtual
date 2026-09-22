@@ -1,13 +1,179 @@
-PC criado pelo @alves7.pcm
+name: 🎮 PC Gamer Virtual
 
 on:
   workflow_dispatch:
     inputs:
       instance_number:
-        description: 'Instance Number (1-10)'
+        description: "Número da instância"
         required: true
-        default: '1'
+        default: "1"
         type: string
+
+jobs:
+  gamer-pc:
+    name: 🎮 Windows Gamer
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+
+      - name: 📥 Baixar projeto
+        uses: actions/checkout@v4
+
+      - name: 🖥️ Informações do Windows
+        shell: pwsh
+        run: |
+          Write-Host "========================================"
+          Write-Host "       🎮 PC GAMER VIRTUAL 🎮"
+          Write-Host "========================================"
+          Write-Host ""
+
+          Write-Host "Instância: ${{ inputs.instance_number }}"
+          Write-Host "Runner: $env:RUNNER_NAME"
+          Write-Host ""
+
+          $os = Get-CimInstance Win32_OperatingSystem
+          $cpu = Get-CimInstance Win32_Processor
+          $computer = Get-CimInstance Win32_ComputerSystem
+
+          Write-Host "========== WINDOWS =========="
+          Write-Host "Sistema: $($os.Caption)"
+          Write-Host "Versão: $($os.Version)"
+          Write-Host "Arquitetura: $($os.OSArchitecture)"
+
+          Write-Host ""
+          Write-Host "========== CPU =========="
+          Write-Host "Processador: $($cpu.Name)"
+          Write-Host "Núcleos: $($cpu.NumberOfCores)"
+          Write-Host "Threads: $($cpu.NumberOfLogicalProcessors)"
+
+          Write-Host ""
+          Write-Host "========== RAM =========="
+          Write-Host "Memória: $([math]::Round($computer.TotalPhysicalMemory / 1GB, 2)) GB"
+
+      - name: 🎮 Detectar GPU
+        shell: pwsh
+        run: |
+          Write-Host "========== GPU =========="
+
+          $gpus = Get-CimInstance Win32_VideoController
+
+          foreach ($gpu in $gpus) {
+              Write-Host ""
+              Write-Host "GPU: $($gpu.Name)"
+              Write-Host "Driver: $($gpu.DriverVersion)"
+
+              if ($gpu.AdapterRAM) {
+                  Write-Host "VRAM: $([math]::Round($gpu.AdapterRAM / 1GB, 2)) GB"
+              }
+          }
+
+      - name: 💾 Verificar armazenamento
+        shell: pwsh
+        run: |
+          Write-Host "========== DISCO =========="
+
+          $disk = Get-PSDrive C
+
+          Write-Host "Espaço livre: $([math]::Round($disk.Free / 1GB, 2)) GB"
+          Write-Host "Espaço usado: $([math]::Round($disk.Used / 1GB, 2)) GB"
+
+      - name: 🎮 Verificar DirectX
+        shell: pwsh
+        run: |
+          Write-Host "========== DIRECTX =========="
+
+          if (Test-Path "$env:WINDIR\System32\dxdiag.exe") {
+              Write-Host "✅ DirectX disponível"
+          }
+          else {
+              Write-Host "⚠️ DirectX não encontrado"
+          }
+
+      - name: 🧰 Instalar 7-Zip
+        shell: pwsh
+        run: |
+          Write-Host "Instalando 7-Zip..."
+
+          choco install 7zip -y --no-progress
+
+          if ($LASTEXITCODE -eq 0) {
+              Write-Host "✅ 7-Zip instalado"
+          }
+          else {
+              Write-Host "⚠️ Não foi possível instalar 7-Zip"
+          }
+
+      - name: 🔧 Verificar ferramentas
+        shell: pwsh
+        run: |
+          Write-Host "========== FERRAMENTAS =========="
+
+          Write-Host ""
+          Write-Host "Git:"
+          git --version
+
+          Write-Host ""
+          Write-Host "PowerShell:"
+          $PSVersionTable.PSVersion
+
+      - name: 📊 Criar resumo
+        shell: pwsh
+        run: |
+          $os = Get-CimInstance Win32_OperatingSystem
+          $cpu = Get-CimInstance Win32_Processor
+          $computer = Get-CimInstance Win32_ComputerSystem
+          $gpu = Get-CimInstance Win32_VideoController | Select-Object -First 1
+
+          $ram = [math]::Round(
+              $computer.TotalPhysicalMemory / 1GB,
+              2
+          )
+
+          $summary = @"
+          # 🎮 PC Gamer Virtual
+
+          ## 🟢 Status
+
+          **Status:** Online
+
+          **Instância:** ${{ inputs.instance_number }}
+
+          **Runner:** $env:RUNNER_NAME
+
+          ## 🖥️ Hardware
+
+          | Componente | Informação |
+          |---|---|
+          | Windows | $($os.Caption) |
+          | CPU | $($cpu.Name) |
+          | Núcleos | $($cpu.NumberOfCores) |
+          | Threads | $($cpu.NumberOfLogicalProcessors) |
+          | RAM | $ram GB |
+          | GPU | $($gpu.Name) |
+
+          ## 🎮 Recursos
+
+          - ✅ Windows
+          - ✅ PowerShell
+          - ✅ DirectX
+          - ✅ Git
+          - ✅ 7-Zip
+
+          > Este é um ambiente temporário do GitHub Actions.
+          "@
+
+          $summary >> $env:GITHUB_STEP_SUMMARY
+
+      - name: ✅ Finalizado
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "========================================" -ForegroundColor Green
+          Write-Host "       🎮 PC GAMER ONLINE! 🎮" -ForegroundColor Green
+          Write-Host "========================================" -ForegroundColor Green
+          Write-Host ""
+          Write-Host "O workflow terminou corretamente."
 
 jobs:
   deploy-rdp:
